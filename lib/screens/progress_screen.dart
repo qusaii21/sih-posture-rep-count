@@ -8,11 +8,14 @@ import 'package:flutter/services.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
 
-
-// Progress Screen
 class ProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+    final double basePadding = isTablet ? 30 : 20;
+    final double titleSize = isTablet ? 30 : 24;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -27,18 +30,20 @@ class ProgressScreen extends StatelessWidget {
             slivers: [
               SliverAppBar(
                 floating: true,
+                toolbarHeight: isTablet ? 90 : 75, // Increased app bar height
                 backgroundColor: Colors.transparent,
                 elevation: 0,
                 flexibleSpace: Container(
-                  padding: const EdgeInsets.all(20),
-                  child: const Row(
+                  padding: EdgeInsets.all(basePadding),
+                  child: Row(
                     children: [
-                      Icon(Icons.trending_up, color: Colors.green, size: 30),
+                      Icon(Icons.trending_up,
+                          color: Colors.green, size: isTablet ? 40 : 30),
                       SizedBox(width: 15),
                       Text(
                         'Your Progress',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: titleSize,
                           fontWeight: FontWeight.bold,
                           color: Colors.green,
                         ),
@@ -47,10 +52,10 @@ class ProgressScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              SliverToBoxAdapter(child: _buildOverallProgress()),
-              SliverToBoxAdapter(child: _buildWeeklyChart()),
-              SliverToBoxAdapter(child: _buildAchievements()),
-              SliverToBoxAdapter(child: _buildRecentTests()),
+              SliverToBoxAdapter(child: _buildOverallProgress(context)),
+              SliverToBoxAdapter(child: _buildWeeklyChart(context)),
+              SliverToBoxAdapter(child: _buildAchievements(context)),
+              SliverToBoxAdapter(child: _buildRecentTests(context)),
             ],
           ),
         ),
@@ -58,47 +63,43 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOverallProgress() {
+  Widget _buildOverallProgress(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+
     return Container(
-      margin: const EdgeInsets.all(20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
+      margin: EdgeInsets.all(isTablet ? 30 : 20),
+      padding: EdgeInsets.all(isTablet ? 30 : 20),
+      decoration: _cardDecoration(),
       child: Column(
         children: [
-          const Text(
+          Text(
             'Overall Fitness Score',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: isTablet ? 22 : 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isTablet ? 30 : 20),
           Stack(
             alignment: Alignment.center,
             children: [
               SizedBox(
-                width: 120,
-                height: 120,
+                width: isTablet ? 150 : 120,
+                height: isTablet ? 150 : 120,
                 child: CircularProgressIndicator(
                   value: 0.78,
-                  strokeWidth: 10,
+                  strokeWidth: isTablet ? 12 : 10,
                   backgroundColor: Colors.grey[200],
                   valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
                 ),
               ),
-              const Column(
+              Column(
                 children: [
                   Text(
                     '78%',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: isTablet ? 34 : 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.green,
                     ),
@@ -108,13 +109,13 @@ class ProgressScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isTablet ? 30 : 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildProgressStat('Tests', '12', Colors.blue),
-              _buildProgressStat('Improvement', '+15%', Colors.green),
-              _buildProgressStat('Streak', '7 days', Colors.orange),
+              _buildProgressStat('Tests', '12', Colors.blue, isTablet),
+              _buildProgressStat('Improvement', '+15%', Colors.green, isTablet),
+              _buildProgressStat('Streak', '7 days', Colors.orange, isTablet),
             ],
           ),
         ],
@@ -122,56 +123,55 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressStat(String label, String value, Color color) {
+  Widget _buildProgressStat(
+      String label, String value, Color color, bool isTablet) {
     return Column(
       children: [
         Text(
           value,
           style: TextStyle(
-            fontSize: 20,
+            fontSize: isTablet ? 24 : 20,
             fontWeight: FontWeight.bold,
             color: color,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(
+            fontSize: isTablet ? 14 : 12,
+            color: Colors.grey,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildWeeklyChart() {
+  Widget _buildWeeklyChart(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
+      margin: EdgeInsets.symmetric(horizontal: isTablet ? 30 : 20),
+      padding: EdgeInsets.all(isTablet ? 30 : 20),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Weekly Performance',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                fontSize: isTablet ? 22 : 18, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isTablet ? 30 : 20),
           Container(
-            height: 150,
+            height: isTablet ? 200 : 150,
             decoration: BoxDecoration(
               color: Colors.grey[50],
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Center(
-              child: Text('Chart Placeholder', style: TextStyle(color: Colors.grey)),
+              child:
+                  Text('Chart Placeholder', style: TextStyle(color: Colors.grey)),
             ),
           ),
         ],
@@ -179,22 +179,28 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievements() {
+  Widget _buildAchievements(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+
     return Container(
-      margin: const EdgeInsets.all(20),
+      margin: EdgeInsets.all(isTablet ? 30 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Achievements',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: isTablet ? 24 : 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: isTablet ? 20 : 15),
           Row(
             children: [
-              Expanded(child: _buildAchievementBadge('First Test', Icons.star, Colors.yellow, true)),
-              Expanded(child: _buildAchievementBadge('Perfect Form', Icons.check_circle, Colors.green, true)),
-              Expanded(child: _buildAchievementBadge('Week Streak', Icons.local_fire_department, Colors.red, false)),
+              Expanded(child: _buildAchievementBadge('First Test', Icons.star, Colors.yellow, true, isTablet)),
+              Expanded(child: _buildAchievementBadge('Perfect Form', Icons.check_circle, Colors.green, true, isTablet)),
+              Expanded(child: _buildAchievementBadge('Week Streak', Icons.local_fire_department, Colors.red, false, isTablet)),
             ],
           ),
         ],
@@ -202,33 +208,36 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievementBadge(String title, IconData icon, Color color, bool unlocked) {
+  Widget _buildAchievementBadge(
+      String title, IconData icon, Color color, bool unlocked, bool isTablet) {
     return Container(
       margin: const EdgeInsets.all(5),
-      padding: const EdgeInsets.all(15),
+      padding: EdgeInsets.all(isTablet ? 20 : 15),
       decoration: BoxDecoration(
         color: unlocked ? Colors.white : Colors.grey[100],
         borderRadius: BorderRadius.circular(15),
-        boxShadow: unlocked ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ] : null,
+        boxShadow: unlocked
+            ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         children: [
           Icon(
             icon,
-            size: 30,
+            size: isTablet ? 40 : 30,
             color: unlocked ? color : Colors.grey,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: isTablet ? 14 : 12,
               color: unlocked ? Colors.black : Colors.grey,
               fontWeight: FontWeight.bold,
             ),
@@ -239,74 +248,82 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentTests() {
+  Widget _buildRecentTests(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: EdgeInsets.symmetric(horizontal: isTablet ? 30 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Recent Tests',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: isTablet ? 24 : 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          const SizedBox(height: 15),
-          _buildTestItem('Push-Ups', '85%', 'Yesterday', Colors.red),
-          _buildTestItem('Squats', '92%', '2 days ago', Colors.green),
-          _buildTestItem('Sit-Ups', '78%', '3 days ago', Colors.orange),
+          SizedBox(height: isTablet ? 20 : 15),
+          _buildTestItem('Push-Ups', '85%', 'Yesterday', Colors.red, isTablet),
+          _buildTestItem('Squats', '92%', '2 days ago', Colors.green, isTablet),
+          _buildTestItem('Sit-Ups', '78%', '3 days ago', Colors.orange, isTablet),
         ],
       ),
     );
   }
 
-  Widget _buildTestItem(String exercise, String score, String date, Color color) {
+  Widget _buildTestItem(
+      String exercise, String score, String date, Color color, bool isTablet) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+      padding: EdgeInsets.all(isTablet ? 20 : 15),
+      decoration: _cardDecoration(),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: isTablet ? 50 : 40,
+            height: isTablet ? 50 : 40,
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.fitness_center, color: color),
+            child: Icon(Icons.fitness_center, color: color, size: isTablet ? 28 : 24),
           ),
-          const SizedBox(width: 15),
+          SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  exercise,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(date, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                Text(exercise, style: TextStyle(fontWeight: FontWeight.bold, fontSize: isTablet ? 18 : 16)),
+                Text(date, style: TextStyle(color: Colors.grey, fontSize: isTablet ? 14 : 12)),
               ],
             ),
           ),
           Text(
             score,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isTablet ? 20 : 18,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 15,
+          offset: const Offset(0, 5),
+        ),
+      ],
     );
   }
 }

@@ -451,7 +451,7 @@ class AboutScreen extends StatelessWidget {
           _buildContactItem(Icons.email, 'Email', 'support@saiapp.gov.in'),
           _buildContactItem(Icons.phone, 'Helpline', '1800-180-7000'),
           _buildContactItem(Icons.language, 'Website', 'www.sportsauthorityofindia.nic.in'),
-          _buildContactItem(Icons.location_on, 'Address', 'JLN Stadium Complex, New Delhi - 110003'),
+          _buildContactItem(Icons.location_on, 'Address', 'JLN Stadium Complex, New Delhi'),
         ],
       ),
     );

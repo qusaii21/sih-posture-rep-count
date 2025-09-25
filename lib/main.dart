@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:convert';
 import 'dart:math';
-import 'package:final_sai/screens/home_screen.dart';
 import 'package:final_sai/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
@@ -38,6 +37,7 @@ class _SAISportsAppState extends State<SAISportsApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SAI Talent Scout',
+      debugShowCheckedModeBanner: false, // debug flag removed (banner disabled)
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -49,7 +49,7 @@ class _SAISportsAppState extends State<SAISportsApp> {
         useMaterial3: true,
       ),
       locale: _currentLocale,
-      home: HomeScreen(
+      home: SplashScreen(
         cameras: widget.cameras,
         onLanguageChange: _changeLanguage,
       ),

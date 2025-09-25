@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
           TemplateExercise('verticalJump', 'Vertical Jump', weightage: 40),
           TemplateExercise('shuttleRun', 'Shuttle Run 5x', weightage: 30),
           TemplateExercise('sitUps', 'Sit-Ups 60s', weightage: 15),
-          TemplateExercise('enduranceRun', 'Endurance 2km', weightage: 15),
+          
         ],
       ),
       SportTemplate(
@@ -122,10 +122,14 @@ class _HomeScreenState extends State<HomeScreen> {
     final titleSize = isSmall ? 18.0 : isMedium ? 20.0 : 22.0;
     final subtitleSize = isSmall ? 11.0 : 12.0;
 
+    // Slightly increased expandedHeight for more vertical space
+    final expandedH = isSmall ? 90.0 : 110.0;
+
     return SliverAppBar(
       floating: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
+      expandedHeight: expandedH,
       flexibleSpace: Container(
         padding: EdgeInsets.all(isSmall ? 12 : 20),
         child: Row(
@@ -256,22 +260,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildStatsCard(BuildContext context, bool isSmall) {
-    // On small screens stack stats vertically
-    if (isSmall) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          children: [
-            _buildStatItem('Tests Completed', '12', Icons.check_circle, Colors.green, isSmall),
-            _buildStatItem('Best Score', '92%', Icons.star, Colors.orange, isSmall),
-            _buildStatItem('Current Rank', '#1,247', Icons.trending_up, Colors.blue, isSmall),
-          ],
-        ),
-      );
-    }
-
+    // Request: always show side-by-side as a row like before
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         children: [
           Expanded(child: _buildStatItem('Tests Completed', '12', Icons.check_circle, Colors.green, isSmall)),
@@ -284,8 +275,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStatItem(String label, String value, IconData icon, Color color, bool isSmall) {
     return Container(
-      margin: EdgeInsets.all(isSmall ? 6 : 5),
-      padding: EdgeInsets.all(isSmall ? 12 : 15),
+      margin: EdgeInsets.all(isSmall ? 6 : 6),
+      padding: EdgeInsets.symmetric(horizontal: isSmall ? 12 : 14, vertical: isSmall ? 14 : 18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
@@ -298,6 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: isSmall ? 26 : 30),
           SizedBox(height: isSmall ? 6 : 8),
@@ -309,10 +301,10 @@ class _HomeScreenState extends State<HomeScreen> {
               color: color,
             ),
           ),
-          SizedBox(height: isSmall ? 6 : 5),
+          SizedBox(height: isSmall ? 6 : 6),
           Text(
             label,
-            style: TextStyle(fontSize: isSmall ? 10 : 10, color: Colors.grey),
+            style: TextStyle(fontSize: isSmall ? 10 : 11, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
         ],
@@ -367,14 +359,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTemplatesList(BuildContext context, bool isSmall, bool isMedium, bool isLarge) {
-    final templates = _sportTemplates[_selectedSport] ?? [];
+    final templates = _sport_templates_safe();
     final width = MediaQuery.of(context).size.width;
 
     // responsive card width for horizontal list
     double cardWidth() {
-      if (isSmall) return min(340, width * 0.82);
-      if (isMedium) return min(380, width * 0.45);
-      return min(420, width * 0.32);
+      if (isSmall) return min(360, width * 0.86);
+      if (isMedium) return min(420, width * 0.52);
+      return min(480, width * 0.36);
+    }
+
+    // Increased heights for template cards as requested
+    double listHeight() {
+      if (isSmall) return 220;
+      if (isMedium) return 240;
+      return 260;
     }
 
     return Container(
@@ -385,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Text('Available Templates', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           SizedBox(
-            height: isSmall ? 180 : 140,
+            height: listHeight(),
             child: templates.isEmpty
                 ? const Center(child: Text('No templates for this sport.'))
                 : ListView.separated(
@@ -399,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         onTap: () => setState(() => _selectedTemplate = t),
                         child: Container(
                           width: cardWidth(),
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: isSelected ? const Color(0xFF1565C0) : Colors.white,
                             borderRadius: BorderRadius.circular(12),
@@ -409,16 +408,19 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(t.name, style: TextStyle(fontSize: isSmall ? 15 : 16, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black)),
-                              SizedBox(height: isSmall ? 6 : 8),
+                              const SizedBox(height: 8),
                               Text('${t.exercises.length} exercises • Total weight ${t.totalWeight}%', style: TextStyle(color: isSelected ? Colors.white70 : Colors.grey)),
-                              SizedBox(height: isSmall ? 6 : 8),
+                              const SizedBox(height: 8),
                               Expanded(
                                 child: ListView.builder(
                                   physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: min(3, t.exercises.length),
+                                  itemCount: min(4, t.exercises.length), // show more lines thanks to increased height
                                   itemBuilder: (context, i) {
                                     final ex = t.exercises[i];
-                                    return Text('• ${ex.title} (${ex.weightage}%)', style: TextStyle(color: isSelected ? Colors.white : Colors.black87, fontSize: isSmall ? 12 : 13));
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text('• ${ex.title} (${ex.weightage}%)', style: TextStyle(color: isSelected ? Colors.white : Colors.black87, fontSize: isSmall ? 12 : 13)),
+                                    );
                                   },
                                 ),
                               ),
@@ -447,6 +449,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  // Helper to safely get templates map without re-evaluating _sportTemplates each time
+  List<SportTemplate> _sport_templates_safe() {
+    return _sportTemplates[_selectedSport] ?? [];
   }
 
   // Template detail modal (view-only)
