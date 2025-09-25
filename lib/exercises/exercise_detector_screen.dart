@@ -7,16 +7,12 @@ import 'package:final_sai/models/analysis_models.dart';
 import 'package:final_sai/models/exercise_models.dart';
 import 'package:final_sai/services/pose_analysis_service.dart';
 import 'package:final_sai/services/pose_detection_service.dart';
+import 'package:final_sai/services/face_verification_service.dart'; // Add this import
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 import 'package:google_mlkit_commons/google_mlkit_commons.dart';
-export 'exercise_detector_screen.dart' show ExerciseDetectorScreen, ExerciseType, PostureAnalysis, PostureRuleEngine, ExerciseSession, SessionAnalysis, PostureFeedback, PostureSeverity;
-
-
-
-
 
 /// Main detector screen
 class ExerciseDetectorScreen extends StatefulWidget {
@@ -40,12 +36,20 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
   bool _isUp = false;
   bool _isCountingStarted = false;
   bool _isRecording = false;
+  bool _faceVerificationEnabled = true; // Add face verification toggle
+  int _selectedCameraIndex = 0;
+bool _isFrontCamera = false;
 
   List<Pose> _poses = [];
   String _status = "Position yourself in front of camera";
   late ExerciseSession _currentSession;
   PostureAnalysis? _currentPostureAnalysis;
   List<PostureFeedback> _activeFeedback = [];
+  
+  // Face verification variables
+  FaceVerificationResult? _faceVerificationResult;
+  bool _isFaceVerified = false;
+  Timer? _faceVerificationTimer;
 
   @override
   void initState() {
@@ -57,21 +61,69 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
       startTime: DateTime.now(),
       poseDataList: [],
     );
+    
+    // Initialize face verification
+    _initializeFaceVerification();
   }
 
-  Future<void> _initializeCamera() async {
-    if (widget.cameras.isEmpty) return;
-
-    _cameraController = CameraController(
-      widget.cameras.first,
-      ResolutionPreset.medium,
-      enableAudio: false,
+Future<void> _switchCamera() async {
+  if (widget.cameras.length < 2) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No other camera available')),
     );
-
-    await _cameraController!.initialize();
-    _cameraController!.startImageStream(_processCameraImage);
-    setState(() {});
+    return;
   }
+
+  await _cameraController?.dispose();
+  
+  setState(() {
+    _selectedCameraIndex = (_selectedCameraIndex + 1) % widget.cameras.length;
+    _isFrontCamera = widget.cameras[_selectedCameraIndex].lensDirection == CameraLensDirection.front;
+  });
+
+  _cameraController = CameraController(
+    widget.cameras[_selectedCameraIndex],
+    ResolutionPreset.medium,
+    enableAudio: false,
+  );
+
+  await _cameraController!.initialize();
+  _cameraController!.startImageStream(_processCameraImage);
+  setState(() {});
+}
+
+
+
+  Future<void> _initializeFaceVerification() async {
+    try {
+      await FaceVerificationService.initialize();
+      setState(() {
+        _status = "Face verification ready. Position yourself in front of camera";
+      });
+    } catch (e) {
+      print('Face verification initialization error: $e');
+      setState(() {
+        _faceVerificationEnabled = false;
+        _status = "Face verification disabled. Ready to exercise";
+      });
+    }
+  }
+
+ Future<void> _initializeCamera() async {
+  if (widget.cameras.isEmpty) return;
+
+  _cameraController = CameraController(
+    widget.cameras[_selectedCameraIndex],
+    ResolutionPreset.medium,
+    enableAudio: false,
+  );
+
+  _isFrontCamera = widget.cameras[_selectedCameraIndex].lensDirection == CameraLensDirection.front;
+
+  await _cameraController!.initialize();
+  _cameraController!.startImageStream(_processCameraImage);
+  setState(() {});
+}
 
   Future<void> _processCameraImage(CameraImage image) async {
     if (_isDetecting) return;
@@ -79,13 +131,54 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
 
     try {
       final inputImage = _convertCameraImage(image);
-      final poses = await _poseDetector.processImage(inputImage);
-      _processPoses(poses);
+      
+      // Perform face verification if enabled
+      if (_faceVerificationEnabled) {
+        await _performFaceVerification(inputImage);
+      } else {
+        _isFaceVerified = true; // Skip verification if disabled
+      }
+      
+      // Only process poses if face is verified (or verification is disabled)
+      if (_isFaceVerified) {
+        final poses = await _poseDetector.processImage(inputImage);
+        _processPoses(poses);
+      } else {
+        setState(() {
+          _poses = [];
+          _status = _faceVerificationResult?.message ?? "Face verification failed";
+        });
+      }
     } catch (e) {
       print('Error: $e');
     }
 
     _isDetecting = false;
+  }
+
+  Future<void> _performFaceVerification(InputImage inputImage) async {
+    try {
+      final result = await FaceVerificationService.verifyFace(inputImage);
+      
+      setState(() {
+        _faceVerificationResult = result;
+        _isFaceVerified = result.isVerified;
+      });
+
+      // Update status based on face verification result
+      if (!_isFaceVerified) {
+        setState(() {
+          _status = result.message;
+          _isCountingStarted = false; // Stop counting if face not verified
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _faceVerificationResult = null;
+        _isFaceVerified = false;
+        _status = "Face verification error";
+      });
+    }
   }
 
   InputImage _convertCameraImage(CameraImage image) {
@@ -129,14 +222,15 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
     _analyzeExercise(pose);
   }
 
-  /// Calculate angle between three points
+  // [Keep all the existing exercise analysis methods unchanged]
+  // _calculateAngle, _calculateExerciseAngles, _extractLandmarks, etc.
+
   double _calculateAngle(
       PoseLandmark point1, PoseLandmark point2, PoseLandmark point3) {
     double angle1 = atan2(point1.y - point2.y, point1.x - point2.x);
     double angle2 = atan2(point3.y - point2.y, point3.x - point2.x);
     double angle = angle2 - angle1;
 
-    // Convert to degrees and normalize
     angle = angle * 180 / pi;
     if (angle < 0) angle += 360;
     if (angle > 180) angle = 360 - angle;
@@ -144,13 +238,11 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
     return angle;
   }
 
-  /// Extract landmarks and calculate angles based on exercise type
   Map<String, JointAngle> _calculateExerciseAngles(Pose pose) {
     Map<String, JointAngle> angles = {};
 
     switch (widget.exerciseType) {
       case ExerciseType.armRaises:
-        // Left arm angle (shoulder-elbow-wrist)
         final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
         final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
         final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
@@ -163,7 +255,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
           );
         }
 
-        // Right arm angle
         final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
         final rightElbow = pose.landmarks[PoseLandmarkType.rightElbow];
         final rightWrist = pose.landmarks[PoseLandmarkType.rightWrist];
@@ -178,7 +269,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
         break;
 
       case ExerciseType.pushUps:
-        // Same elbow angles as arm raises
         final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
         final leftElbow = pose.landmarks[PoseLandmarkType.leftElbow];
         final leftWrist = pose.landmarks[PoseLandmarkType.leftWrist];
@@ -205,7 +295,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
         break;
 
       case ExerciseType.squats:
-        // Left knee angle (hip-knee-ankle)
         final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
         final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
         final leftAnkle = pose.landmarks[PoseLandmarkType.leftAnkle];
@@ -218,7 +307,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
           );
         }
 
-        // Right knee angle
         final rightHip = pose.landmarks[PoseLandmarkType.rightHip];
         final rightKnee = pose.landmarks[PoseLandmarkType.rightKnee];
         final rightAnkle = pose.landmarks[PoseLandmarkType.rightAnkle];
@@ -233,7 +321,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
         break;
 
       case ExerciseType.sitUps:
-        // Hip angle (shoulder-hip-knee)
         final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
         final leftHip = pose.landmarks[PoseLandmarkType.leftHip];
         final leftKnee = pose.landmarks[PoseLandmarkType.leftKnee];
@@ -263,11 +350,9 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
     return angles;
   }
 
-  /// Extract relevant landmarks for the exercise
   Map<String, Point> _extractLandmarks(Pose pose) {
     Map<String, Point> landmarks = {};
 
-    // Common landmarks for all exercises
     final commonLandmarks = [
       PoseLandmarkType.leftShoulder,
       PoseLandmarkType.rightShoulder,
@@ -297,7 +382,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
     return landmarks;
   }
 
-  /// Exercise-specific logic with posture analysis
   void _analyzeExercise(Pose pose) {
     bool isUp = false;
 
@@ -316,7 +400,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
         break;
     }
 
-    // Calculate angles and perform posture analysis
     final angles = _calculateExerciseAngles(pose);
     final postureAnalysis = PostureRuleEngine.analyzePose(widget.exerciseType, angles);
     
@@ -324,11 +407,10 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
       _currentPostureAnalysis = postureAnalysis;
       _activeFeedback = postureAnalysis.feedback
           .where((f) => f.severity != PostureSeverity.good)
-          .take(2) // Show only top 2 issues to avoid clutter
+          .take(2)
           .toList();
     });
 
-    // Record pose data if recording is enabled
     if (_isRecording) {
       final landmarks = _extractLandmarks(pose);
 
@@ -343,6 +425,7 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
     }
   }
 
+  // [Keep all existing exercise analysis methods]
   bool _analyzeArmRaises(Pose pose) {
     final leftShoulder = pose.landmarks[PoseLandmarkType.leftShoulder];
     final rightShoulder = pose.landmarks[PoseLandmarkType.rightShoulder];
@@ -375,7 +458,7 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
 
     final shoulderY = (leftShoulder!.y + rightShoulder!.y) / 2;
     final elbowY = (leftElbow!.y + rightElbow!.y) / 2;
-    final isDown = elbowY < shoulderY + 50; // arms bent (down position)
+    final isDown = elbowY < shoulderY + 50;
 
     _updateRepCount(isDown);
     return isDown;
@@ -394,7 +477,7 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
 
     final hipY = (leftHip!.y + rightHip!.y) / 2;
     final kneeY = (leftKnee!.y + rightKnee!.y) / 2;
-    final isDown = kneeY > hipY + 50; // squat down
+    final isDown = kneeY > hipY + 50;
 
     _updateRepCount(isDown);
     return isDown;
@@ -413,13 +496,19 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
 
     final hipY = (leftHip!.y + rightHip!.y) / 2;
     final shoulderY = (leftShoulder!.y + rightShoulder!.y) / 2;
-    final isUp = shoulderY < hipY - 50; // upper body lifted
+    final isUp = shoulderY < hipY - 50;
 
     _updateRepCount(isUp);
     return isUp;
   }
 
   void _updateRepCount(bool isUp) {
+    // Only count reps if face is verified (or verification is disabled)
+    if (!_isFaceVerified && _faceVerificationEnabled) {
+      setState(() => _status = "Face verification required to count reps");
+      return;
+    }
+
     if (!_isCountingStarted && isUp) {
       _isCountingStarted = true;
       _status = "Counting started! Perform the exercise";
@@ -453,6 +542,8 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
       );
       _currentPostureAnalysis = null;
       _activeFeedback.clear();
+      _faceVerificationResult = null;
+      _isFaceVerified = false;
     });
   }
 
@@ -473,11 +564,24 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
     });
   }
 
+  void _toggleFaceVerification() {
+    setState(() {
+      _faceVerificationEnabled = !_faceVerificationEnabled;
+      if (!_faceVerificationEnabled) {
+        _isFaceVerified = true;
+        _faceVerificationResult = null;
+        _status = "Face verification disabled";
+      } else {
+        _isFaceVerified = false;
+        _status = "Face verification enabled";
+      }
+    });
+  }
+
   void _exportJson() {
     final jsonString =
         const JsonEncoder.withIndent('  ').convert(_currentSession.toJson());
 
-    // Copy to clipboard
     Clipboard.setData(ClipboardData(text: jsonString));
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -487,7 +591,6 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
       ),
     );
 
-    // Print to console for debugging
     print('Exercise Session JSON:');
     print(jsonString);
   }
@@ -536,6 +639,19 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
       appBar: AppBar(
         title: Text(widget.exerciseType.name.toUpperCase()),
         actions: [
+          // Face verification toggle button
+          IconButton(
+            icon: Icon(
+              _faceVerificationEnabled ? Icons.face : Icons.face_unlock_outlined,
+              color: _faceVerificationEnabled 
+                  ? (_isFaceVerified ? Colors.green : Colors.red) 
+                  : Colors.grey,
+            ),
+            onPressed: _toggleFaceVerification,
+            tooltip: _faceVerificationEnabled 
+                ? 'Disable face verification' 
+                : 'Enable face verification',
+          ),
           IconButton(
             icon: Icon(_isRecording ? Icons.stop : Icons.fiber_manual_record),
             onPressed: _toggleRecording,
@@ -551,6 +667,11 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
                 _currentSession.poseDataList.isNotEmpty ? _exportJson : null,
           ),
           IconButton(
+  icon: Icon(_isFrontCamera ? Icons.camera_front : Icons.camera_rear),
+  onPressed: _switchCamera,
+  tooltip: 'Switch Camera',
+),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _resetCounter,
           ),
@@ -560,10 +681,11 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
         children: [
           CameraPreview(_cameraController!),
           CustomPaint(
-            painter: PosePainter(
+            painter: EnhancedPosePainter(
                 _poses,
                 Size(_cameraController!.value.previewSize!.height,
-                    _cameraController!.value.previewSize!.width)),
+                    _cameraController!.value.previewSize!.width),
+                _faceVerificationResult),
             child: Container(),
           ),
           // Main info panel
@@ -588,6 +710,34 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
                               fontWeight: FontWeight.bold)),
                       Row(
                         children: [
+                          // Face verification status indicator
+                          if (_faceVerificationEnabled) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _isFaceVerified ? Colors.green : Colors.red,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _isFaceVerified ? Icons.verified_user : Icons.warning,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _isFaceVerified ? 'Verified' : 'Unverified',
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           if (_currentPostureAnalysis != null) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(
@@ -622,6 +772,16 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
                         'Poses recorded: ${_currentSession.poseDataList.length}',
                         style: const TextStyle(
                             color: Colors.white70, fontSize: 12)),
+                  // Show face verification details if available
+                  if (_faceVerificationResult != null && 
+                      _faceVerificationEnabled && 
+                      _faceVerificationResult!.faceCount > 0) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Similarity: ${(_faceVerificationResult!.similarity * 100).toInt()}% | Faces: ${_faceVerificationResult!.faceCount}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 10),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -680,6 +840,21 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
+          // Face verification toggle FAB
+          FloatingActionButton(
+            heroTag: "face_verification",
+            onPressed: _toggleFaceVerification,
+            backgroundColor: _faceVerificationEnabled 
+                ? (_isFaceVerified ? Colors.green : Colors.red) 
+                : Colors.grey,
+            child: Icon(
+              _faceVerificationEnabled ? Icons.face : Icons.face_unlock_outlined,
+            ),
+            tooltip: _faceVerificationEnabled 
+                ? 'Disable Face Verification' 
+                : 'Enable Face Verification',
+          ),
+          const SizedBox(height: 16),
           if (_currentSession.poseDataList.isNotEmpty)
             FloatingActionButton(
               heroTag: "analysis",
@@ -721,6 +896,8 @@ class _ExerciseDetectorScreenState extends State<ExerciseDetectorScreen> {
   void dispose() {
     _cameraController?.dispose();
     _poseDetector.close();
+    _faceVerificationTimer?.cancel();
+    FaceVerificationService.dispose();
     super.dispose();
   }
 }
