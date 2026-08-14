@@ -2,6 +2,12 @@
 
 VisionFit is a Flutter-based real-time computer vision application for human pose estimation, exercise tracking, and movement analysis. Using the device camera and Google ML Kit's pose detection capabilities, the application detects body landmarks, derives joint angles, analyzes movement patterns, counts repetitions, and provides visual feedback on exercise form.
 
+
+
+https://github.com/user-attachments/assets/e3a946d6-c8da-461d-843b-65b8808c8d6d
+
+
+
 ## Overview
 
 The application processes live camera frames to build a real-time human pose analysis pipeline:
