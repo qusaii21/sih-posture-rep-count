@@ -1,85 +1,171 @@
-# SAI Talent Scout
+# VisionFit - Real-Time Pose Analysis & Exercise Tracking
 
-SAI Talent Scout is a Flutter-based computer vision application for real-time sports posture analysis and rep counting. It uses the device camera together with Google ML Kit pose detection to track body landmarks, estimate joint angles, and provide feedback on exercise form.
+VisionFit is a Flutter-based real-time computer vision application for human pose estimation, exercise tracking, and movement analysis. Using the device camera and Google ML Kit's pose detection capabilities, the application detects body landmarks, derives joint angles, analyzes movement patterns, counts repetitions, and provides visual feedback on exercise form.
 
-## Computer Vision Focus
+## Overview
 
-This project is a good fit for a computer vision portfolio because it demonstrates practical vision-based inference in a mobile app:
+The application processes live camera frames to build a real-time human pose analysis pipeline:
 
-- Real-time camera capture and frame processing
-- Human pose estimation with body landmark detection
-- Joint angle calculation from detected landmarks
-- Rule-based posture assessment for exercise quality
-- Visual overlay of pose skeletons on live video
-- Face detection support through ML Kit packages already included in the app
+1. Capture live video from the device camera.
+2. Process camera frames for pose estimation.
+3. Detect and track human body landmarks.
+4. Calculate geometric features such as joint angles.
+5. Analyze movement and exercise form using rule-based logic.
+6. Render detected landmarks and feedback over the live camera preview.
 
-The core workflow is:
-
-1. Capture live video from the camera.
-2. Detect body pose landmarks using ML Kit.
-3. Convert landmarks into joint angles.
-4. Evaluate posture and classify movement quality.
-5. Render pose feedback on top of the camera preview.
-
-## Why This Is Relevant for a Computer Vision Role
-
-This project is useful to showcase on a computer vision resume because it shows that you can:
-
-- Integrate a vision model into a production-style mobile app
-- Work with real-time inference constraints
-- Transform raw detections into meaningful biomechanics metrics
-- Build feedback systems on top of CV outputs
-- Combine camera input, pose estimation, and UI visualization into one pipeline
-
-If you are applying for a computer vision, ML, or applied AI role, this project is stronger than a typical Flutter app because the main product value comes from vision-based analysis rather than static UI.
+This creates an end-to-end pipeline from raw visual input to structured movement analysis and user feedback.
 
 ## Features
 
-- Live camera preview
-- Pose landmark detection
-- Exercise posture analysis
-- Rep/form feedback for supported movements
-- Pose skeleton rendering overlay
-- Multi-screen Flutter UI with splash and workout flow
-- Asset-backed video and media support
+* Real-time camera capture and frame processing
+* Human pose landmark detection
+* Body skeleton visualization
+* Joint angle estimation
+* Exercise movement analysis
+* Repetition counting
+* Rule-based posture and form evaluation
+* Real-time visual feedback
+* Support for multiple exercise movements
+* Face detection support through Google ML Kit
+* Flutter-based interactive workout interface
+* Video and media asset support
+
+## Supported Exercises
+
+The current posture analysis pipeline includes rule-based analysis for:
+
+* Arm Raises
+* Push-ups
+* Squats
+* Sit-ups
+
+Each exercise uses detected body landmarks and calculated joint angles to evaluate movement states and determine repetitions or form-related feedback.
+
+## Vision Pipeline
+
+```text
+Camera Input
+     ↓
+Frame Processing
+     ↓
+Pose Detection
+     ↓
+Body Landmarks
+     ↓
+Geometric Analysis
+     ↓
+Joint Angle Calculation
+     ↓
+Movement / Posture Classification
+     ↓
+Rep Counting & Feedback
+     ↓
+Visual Overlay
+```
+
+The system uses body landmark coordinates as the primary representation for movement analysis. Joint angles are calculated from relevant landmark points and used as features for determining exercise states and posture quality.
 
 ## Tech Stack
 
-- Flutter
-- Dart
-- `camera`
-- `google_mlkit_pose_detection`
-- `google_mlkit_commons`
-- `google_mlkit_face_detection`
-- `video_player`
+* **Flutter**
+* **Dart**
+* **Google ML Kit Pose Detection**
+* **Google ML Kit Face Detection**
+* **Camera API**
+* **Video Player**
+
+### Key Packages
+
+```yaml
+camera
+google_mlkit_pose_detection
+google_mlkit_commons
+google_mlkit_face_detection
+video_player
+```
 
 ## Project Structure
 
-- `lib/main.dart` - app entry point and camera initialization
-- `lib/services/pose_detection_service.dart` - pose landmark rendering
-- `lib/services/pose_analysis_service.dart` - posture scoring and feedback logic
-- `lib/models/` - analysis and exercise data models
-- `lib/screens/` - app screens and user flows
-- `assets/videos/` - media assets used by the app
+```text
+lib/
+├── main.dart
+├── models/
+│   └── ...
+├── screens/
+│   └── ...
+└── services/
+    ├── pose_detection_service.dart
+    └── pose_analysis_service.dart
+
+assets/
+└── videos/
+```
+
+### Core Components
+
+* `lib/main.dart`
+  Application entry point, camera initialization, and application setup.
+
+* `lib/services/pose_detection_service.dart`
+  Handles pose landmark processing and visualization of the detected body skeleton.
+
+* `lib/services/pose_analysis_service.dart`
+  Performs movement analysis, joint-angle calculations, posture evaluation, and exercise-specific logic.
+
+* `lib/models/`
+  Contains data structures used for exercise and movement analysis.
+
+* `lib/screens/`
+  Contains the application's UI screens and workout flows.
+
+* `assets/videos/`
+  Contains video and other media assets used within the application.
 
 ## How It Works
 
-The app starts by loading available cameras, then passes them into the main Flutter app. From there, the pose detection service draws landmarks and body connections, while the analysis service evaluates angles such as elbows and knees to judge exercise form.
+The application initializes the available device cameras and uses the selected camera as the visual input stream.
 
-The posture engine currently supports rule-based analysis for exercises such as:
+Each frame is processed through the pose detection pipeline. The detected landmarks provide coordinates for key body joints such as the shoulders, elbows, hips, knees, and ankles.
 
-- Arm raises
-- Push-ups
-- Squats
-- Sit-ups
+These landmarks are then used to derive geometric measurements, including joint angles:
+
+```text
+Body Landmarks
+      ↓
+Landmark Coordinates
+      ↓
+Joint Geometry
+      ↓
+Angle Calculation
+      ↓
+Movement State
+      ↓
+Exercise Analysis
+```
+
+For example, elbow and knee angles can be used to identify different stages of movements such as push-ups and squats. Consecutive movement states can then be used to estimate repetitions and provide feedback.
+
+## Real-Time Visualization
+
+Detected landmarks and skeletal connections are rendered directly over the camera preview, allowing the user to observe the pose estimation results while performing an exercise.
+
+This provides a visual representation of the intermediate output of the pose estimation pipeline rather than treating the model as a black-box prediction system.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Flutter SDK
-- Android Studio or Xcode, depending on the target platform
-- A physical device with a camera for the best real-time vision experience
+* Flutter SDK
+* Android Studio or Xcode
+* Android/iOS device with a camera
+* Physical device recommended for real-time camera processing
+
+### Clone the Repository
+
+```bash
+git clone <repository-url>
+cd <project-directory>
+```
 
 ### Install Dependencies
 
@@ -87,7 +173,7 @@ The posture engine currently supports rule-based analysis for exercises such as:
 flutter pub get
 ```
 
-### Run the App
+### Run the Application
 
 ```bash
 flutter run
@@ -95,12 +181,6 @@ flutter run
 
 ## Notes
 
-- This app is best demonstrated on a real device because it depends on live camera input.
-- For a computer vision role, highlight the pose estimation pipeline, angle-based analysis, and real-time overlay rendering in your resume or portfolio.
-
-## Flutter Reference
-
-For general Flutter help, see the official documentation:
-
-- [Flutter documentation](https://docs.flutter.dev/)
-- [Flutter cookbook](https://docs.flutter.dev/cookbook)
+* The application relies on live camera input and is best tested on a physical device.
+* Real-time performance may vary depending on the device hardware and camera configuration.
+* Pose detection and analysis are performed as part of the live camera processing pipeline.
